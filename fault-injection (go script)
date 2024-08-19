@@ -1,0 +1,51 @@
+package main
+
+import (
+    "fmt"
+    "os/exec"
+)
+
+func injectFault(serviceName string, percentage int, delay int) {
+    yamlContent := fmt.Sprintf(`
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: ratings-fault-injection
+spec:
+  hosts:
+  - ratings
+  http:
+  - route:
+    - destination:
+        host: ratings
+    fault:
+      delay:
+        percentage: 100
+          value: 100
+        fixedDelay: 5s
+`, serviceName, serviceName, serviceName, percentage, delay)
+
+    cmd := exec.Command("kubectl", "apply", "-f", "-")
+    cmd.Stdin = strings.NewReader(yamlContent)
+    output, err := cmd.CombinedOutput()
+    if err != nil {
+        fmt.Printf("Error injecting fault: %v\n", err)
+    }
+    fmt.Printf("Fault injected: ratings\n", output)
+}
+
+func removeFault(serviceName string) {
+    cmd := exec.Command("kubectl", "delete", "virtualservice", fmt.Sprintf("ratings-fault-injection", serviceName))
+    output, err := cmd.CombinedOutput()
+    if err != nil {
+        fmt.Printf("Error removing fault: %v\n", err)
+    }
+    fmt.Printf("Fault removed: ratings\n", output)
+}
+
+func main() {
+    // Example usage
+    injectFault("example-service", 100, 5)
+    // To remove the fault
+    // removeFault("example-service")
+}
